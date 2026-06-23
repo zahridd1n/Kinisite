@@ -1,0 +1,101 @@
+<!-- movies/templates/movies/home.html -->
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KinoSayt</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0f0f0f; color: #e0e0e0; font-family: sans-serif; }
+
+    header { background: #1a1a1a; padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+    header h1 { font-size: 1.4rem; flex: 1; }
+
+    .search-form { display: flex; gap: 8px; }
+    .search-form input {
+      background: #2a2a2a; border: 1px solid #333; color: #fff;
+      padding: 8px 14px; border-radius: 6px; font-size: 0.9rem; width: 220px;
+    }
+    .search-form button {
+      background: #4a9eff; color: #fff; border: none;
+      padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem;
+    }
+
+    .genres { padding: 12px 24px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .genres a {
+      background: #2a2a2a; color: #ccc; padding: 4px 12px;
+      border-radius: 20px; font-size: 0.85rem; text-decoration: none;
+    }
+    .genres a.active, .genres a:hover { background: #4a9eff; color: #fff; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      padding: 16px 24px;
+    }
+
+    .card {
+      background: #1a1a1a; border-radius: 10px; overflow: hidden;
+      text-decoration: none; color: inherit; transition: transform 0.2s;
+    }
+    .card:hover { transform: translateY(-4px); }
+    .card-poster {
+      width: 100%; aspect-ratio: 2/3; background: #2a2a2a;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem;
+    }
+    .card-poster img { width: 100%; height: 100%; object-fit: cover; }
+    .card-info { padding: 10px 12px; }
+    .card-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; }
+    .card-meta { font-size: 0.8rem; color: #888; }
+
+    .empty { text-align: center; padding: 60px; color: #666; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🎬 KinoSayt</h1>
+  <form class="search-form" method="get">
+    <input type="text" name="q" value="{{ q }}" placeholder="Kino qidirish...">
+    <button type="submit">Qidirish</button>
+  </form>
+</header>
+
+{% if genres %}
+<div class="genres">
+  <a href="?" class="{% if not genre %}active{% endif %}">Barchasi</a>
+  {% for g in genres %}
+  {% if g %}
+  <a href="?genre={{ g }}" class="{% if genre == g %}active{% endif %}">{{ g }}</a>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="grid">
+  {% for movie in movies %}
+  <a class="card" href="{% url 'movie_detail' movie.pk %}">
+    <div class="card-poster">
+      {% if movie.poster %}
+      <img src="{{ movie.poster.url }}" alt="{{ movie.title }}">
+      {% else %}
+      🎥
+      {% endif %}
+    </div>
+    <div class="card-info">
+      <div class="card-title">{{ movie.title }}</div>
+      <div class="card-meta">
+        {% if movie.year %}{{ movie.year }} · {% endif %}
+        {{ movie.genre|default:"Kino" }}
+      </div>
+    </div>
+  </a>
+  {% empty %}
+  <div class="empty" style="grid-column: 1/-1">Hech narsa topilmadi 😔</div>
+  {% endfor %}
+</div>
+
+</body>
+</html>
