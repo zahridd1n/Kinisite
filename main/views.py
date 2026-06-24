@@ -1,13 +1,16 @@
+# main/views.py
 
-import os
 import asyncio
+import threading
+import queue
+import json
+
 from django.conf import settings
 from django.http import StreamingHttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.cache import cache
-import json
 
 from telethon import TelegramClient
 from telethon.sessions import StringSession
@@ -25,111 +28,118 @@ def get_client() -> TelegramClient:
     )
 
 
-def run_async(coro):
-    """Django sync muhitida async kodni ishlatish."""
+# ─── Fayl hajmini olish ───────────────────────────────────────────────────────
+
+def get_file_size(message_id: int) -> int | None:
+    """Telegram dan fayl hajmini oladi (keshlanadi)."""
+
+    async def _get():
+        async with get_client() as client:
+            msg = await client.get_messages(settings.TELEGRAM_CHANNEL, ids=message_id)
+            if msg and msg.media and hasattr(msg.media, "document"):
+                return msg.media.document.size
+        return None
+
     loop = asyncio.new_event_loop()
     try:
-        return loop.run_until_complete(coro)
+        return loop.run_until_complete(_get())
     finally:
         loop.close()
 
 
-# ─── Stream ───────────────────────────────────────────────────────────────────
+# ─── Real-time stream generator ───────────────────────────────────────────────
 
-async def _iter_file_chunks(message_id: int, start: int, end: int | None):
+def telegram_stream(message_id: int, start: int, end: int):
     """
-    Telegram kanaldan faylni chunk larga bo'lib beradi.
-    message_id — kanalga yuklangan xabar raqami.
+    Chunk kelishi bilan darhol yield qiladi.
+    Alohida thread da async loop ishlatadi, queue orqali sync ga uzatadi.
     """
-    async with get_client() as client:
-        channel = settings.TELEGRAM_CHANNEL  # masalan: -1001234567890
-        message = await client.get_messages(channel, ids=message_id)
+    q = queue.Queue(maxsize=4)  # 4 chunk bufer (4 MB)
+    DONE = object()             # tugatish signali
 
-        if not message or not message.media:
-            return
+    def run_loop():
+        async def _stream():
+            try:
+                async with get_client() as client:
+                    msg = await client.get_messages(
+                        settings.TELEGRAM_CHANNEL, ids=message_id
+                    )
+                    if not msg or not msg.media:
+                        q.put(DONE)
+                        return
 
-        # offset va limit hisoblash
-        chunk_size = 1024 * 1024  # 1 MB
+                    async for chunk in client.iter_download(
+                        msg.media,
+                        offset=start,
+                        chunk_size=512 * 1024,   # 512 KB — kichikroq chunk = tezroq boshlanish
+                        limit=end - start + 1,
+                    ):
+                        q.put(chunk)             # Django ga yuborish uchun queue ga qo'y
 
-        async for chunk in client.iter_download(
-            message.media,
-            offset=start,
-            limit=(end - start + 1) if end else None,
-            chunk_size=chunk_size,
-            dc_id=message.media.document.dc_id if hasattr(message.media, 'document') else None,
-        ):
-            yield chunk
+            except Exception as e:
+                print(f"Stream xato: {e}")
+            finally:
+                q.put(DONE)
 
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(_stream())
+        loop.close()
+
+    # Async loop ni alohida threadda ishga tushir
+    t = threading.Thread(target=run_loop, daemon=True)
+    t.start()
+
+    # Queue dan chunk lar kelishi bilan yield qil
+    while True:
+        chunk = q.get()
+        if chunk is DONE:
+            break
+        yield chunk
+
+
+# ─── Stream view ─────────────────────────────────────────────────────────────
 
 def stream_video(request, pk):
-    """
-    Range header ni qo'llab-quvvatlaydigan video stream.
-    Seek qilish ishlaydi.
-    """
     movie = get_object_or_404(Movie, pk=pk, is_active=True)
 
     if not movie.telegram_message_id:
         return JsonResponse({"error": "Message ID yo'q"}, status=404)
 
-    # Fayl hajmini olish (keshdan)
+    # Fayl hajmini keshdan yoki Telegram dan ol
     cache_key = f"movie_size_{pk}"
     file_size = cache.get(cache_key)
 
     if not file_size:
-        async def get_size():
-            async with get_client() as client:
-                msg = await client.get_messages(
-                    settings.TELEGRAM_CHANNEL,
-                    ids=movie.telegram_message_id
-                )
-                if msg and msg.media and hasattr(msg.media, 'document'):
-                    return msg.media.document.size
-                return None
-
-        file_size = run_async(get_size())
+        file_size = get_file_size(movie.telegram_message_id)
         if file_size:
             cache.set(cache_key, file_size, timeout=60 * 60 * 24)
 
     if not file_size:
         return JsonResponse({"error": "Fayl topilmadi"}, status=404)
 
-    # Range header ni parse qilish
+    # Range header parse
     range_header = request.META.get("HTTP_RANGE", "")
     start = 0
     end = file_size - 1
     status = 200
 
     if range_header:
-        # "bytes=0-999999" → start=0, end=999999
-        range_match = range_header.replace("bytes=", "").split("-")
-        start = int(range_match[0]) if range_match[0] else 0
-        end = int(range_match[1]) if range_match[1] else file_size - 1
-        status = 206  # Partial Content
+        parts = range_header.replace("bytes=", "").split("-")
+        start = int(parts[0]) if parts[0] else 0
+        end = int(parts[1]) if len(parts) > 1 and parts[1] else file_size - 1
+        status = 206
 
     content_length = end - start + 1
 
-    # Sync generator — Django StreamingHttpResponse uchun
-    def sync_generator():
-        async def collect():
-            chunks = []
-            async for chunk in _iter_file_chunks(
-                movie.telegram_message_id, start, end
-            ):
-                chunks.append(chunk)
-            return chunks
-
-        chunks = run_async(collect())
-        for chunk in chunks:
-            yield chunk
-
     response = StreamingHttpResponse(
-        sync_generator(),
+        telegram_stream(movie.telegram_message_id, start, end),
         status=status,
         content_type="video/mp4",
     )
     response["Content-Length"] = content_length
     response["Content-Range"] = f"bytes {start}-{end}/{file_size}"
     response["Accept-Ranges"] = "bytes"
+    response["Cache-Control"] = "no-cache"
 
     return response
 
@@ -185,19 +195,19 @@ def add_file(request):
     message_id = data.get("message_id")
     caption = data.get("caption", "")
 
-    if not file_id or not message_id:
-        return JsonResponse({"error": "file_id va message_id kerak"}, status=400)
+    if not message_id:
+        return JsonResponse({"error": "message_id kerak"}, status=400)
 
     lines = caption.strip().split("\n")
     title = lines[0] if lines and lines[0] else f"Kino #{message_id}"
     description = "\n".join(lines[1:]) if len(lines) > 1 else ""
 
     movie, created = Movie.objects.get_or_create(
-        telegram_file_id=file_id,
+        telegram_message_id=message_id,
         defaults={
             "title": title,
             "description": description,
-            "telegram_message_id": message_id,
+            "telegram_file_id": file_id or "",
         },
     )
 
