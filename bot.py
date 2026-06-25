@@ -61,3 +61,110 @@
 #
 # if __name__ == "__main__":
 #     main()
+import asyncio
+from datetime import datetime
+from telethon import TelegramClient, events
+from telethon.tl.functions.photos import UploadProfilePhotoRequest
+from telethon.tl.functions.account import UpdateProfileRequest
+from telethon.errors import FloodWaitError
+from pathlib import Path
+import random
+
+# =========================
+# TELEGRAM API MA'LUMOTLARI
+# =========================
+API_ID = 36295785
+API_HASH = "ac4588c8b05ebc511d186397fe521c57"
+SESSION_NAME = "my_account"
+
+UPDATE_INTERVAL = 10      # har 10 sekundda rasm yangilanadi
+IMAGE_FOLDER = "image"    # rasmlar papkasi
+PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+
+# Avtomatik javob uchun
+AUTO_REPLY_TEXT = (
+    "Salom! 👋 Xabaringiz uchun rahmat.\n"
+    "Hozir band bo'lsam ham, tez orada siz bilan bog'lanaman! 🙏"
+)
+
+# Bir xil odamga qayta-qayta javob bermaslik uchun
+replied_users = set()
+
+
+def get_images() -> list[Path]:
+    """image/ papkasidagi barcha rasmlarni qaytaradi"""
+    folder = Path(IMAGE_FOLDER)
+    if not folder.exists():
+        folder.mkdir()
+        print(f"[INFO] '{IMAGE_FOLDER}' papkasi yaratildi. Rasmlarni shu joyga qo'ying.")
+    images = [f for f in folder.iterdir() if f.suffix.lower() in PHOTO_EXTENSIONS]
+    return images
+
+
+async def update_photo(client: TelegramClient):
+    """Papkadan tasodifiy rasm tanlab profilga qo'yadi"""
+    images = get_images()
+    if not images:
+        print("[PHOTO] Rasmlar topilmadi! 'image/' papkasiga rasm qo'ying.")
+        return
+
+    chosen = random.choice(images)
+    file = await client.upload_file(str(chosen))
+    await client(UploadProfilePhotoRequest(file=file))
+    print(f"[PHOTO] '{chosen.name}' → {datetime.now().strftime('%H:%M:%S')}")
+
+
+async def update_bio(client: TelegramClient):
+    """Bioga joriy vaqtni yozadi"""
+    current_time = datetime.now().strftime("%H:%M")
+    bio_text = f"🕒 {current_time} | Tashkent"
+    await client(UpdateProfileRequest(about=bio_text))
+    print(f"[BIO] Yangilandi: {bio_text}")
+
+
+async def profile_loop(client: TelegramClient):
+    """Har 10 sekundda rasm va bio yangilaydi"""
+    while True:
+        try:
+            await update_photo(client)
+            await update_bio(client)
+        except FloodWaitError as e:
+            wait = int(e.seconds) + 5
+            print(f"[FloodWait] {wait} sekund kutaman...")
+            await asyncio.sleep(wait)
+            continue
+        except Exception as e:
+            print(f"[XATOLIK] {e}")
+
+        await asyncio.sleep(UPDATE_INTERVAL)
+
+
+async def main():
+    client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
+    await client.start()
+    print("✅ Telegram akkauntga ulandi.\n")
+
+    # ================================
+    # AVTOMATIK JAVOB (lichka xabarga)
+    # ================================
+    @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
+    async def auto_reply(event):
+        sender_id = event.sender_id
+        if sender_id in replied_users:
+            return  # allaqachon javob berilgan
+
+        replied_users.add(sender_id)
+        await asyncio.sleep(1)  # biroz kutib javob beradi (tabiiyroq)
+        await event.reply(AUTO_REPLY_TEXT)
+        sender = await event.get_sender()
+        name = getattr(sender, "first_name", "Noma'lum")
+        print(f"[AUTO-REPLY] '{name}' ga javob berildi.")
+
+    print("📸 Rasm yangilash va avtomatik javob ishga tushdi...\n")
+
+    # Rasm loop va client birga ishlaydi
+    await profile_loop(client)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

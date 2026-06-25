@@ -9,12 +9,13 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-TELEGRAM_BOT_TOKEN ="Bot token"
-TELEGRAM_API_ID = 123454
-TELEGRAM_API_HASH ="apihash"
-TELEGRAM_SESSION = "ses.py ni run qilib olasiz"
-TELEGRAM_CHANNEL = "@abubakirkino12"  # masalan: "mykinochannel" yoki -1001911091109
-INTERNAL_API_KEY = "mening_maxfiy_parolim_123"
+# TELEGRAM_BOT_TOKEN ="Bot token"
+# TELEGRAM_API_ID = 123454
+# TELEGRAM_API_HASH ="apihash"
+# TELEGRAM_SESSION = "ses.py ni run qilib olasiz"
+# TELEGRAM_CHANNEL = "@abubakirkino12"  # masalan: "mykinochannel" yoki -1001911091109
+# INTERNAL_API_KEY = "mening_maxfiy_parolim_123"
+
 from pathlib import Path
 
 from django.conf.global_settings import STATICFILES_DIRS
@@ -128,9 +129,10 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+

@@ -1,101 +1,1133 @@
-<!-- movies/templates/movies/home.html -->
+{% load static %}
 <!DOCTYPE html>
 <html lang="uz">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>KinoSayt</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineUZ — Kinolar</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0f0f0f; color: #e0e0e0; font-family: sans-serif; }
-
-    header { background: #1a1a1a; padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
-    header h1 { font-size: 1.4rem; flex: 1; }
-
-    .search-form { display: flex; gap: 8px; }
-    .search-form input {
-      background: #2a2a2a; border: 1px solid #333; color: #fff;
-      padding: 8px 14px; border-radius: 6px; font-size: 0.9rem; width: 220px;
-    }
-    .search-form button {
-      background: #4a9eff; color: #fff; border: none;
-      padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem;
-    }
-
-    .genres { padding: 12px 24px; display: flex; gap: 8px; flex-wrap: wrap; }
-    .genres a {
-      background: #2a2a2a; color: #ccc; padding: 4px 12px;
-      border-radius: 20px; font-size: 0.85rem; text-decoration: none;
-    }
-    .genres a.active, .genres a:hover { background: #4a9eff; color: #fff; }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 16px;
-      padding: 16px 24px;
+    /* ── Tokens ─────────────────────────────────────────── */
+    :root {
+      --bg-base:     #0A0A0F;
+      --bg-card:     #12121A;
+      --bg-elevated: #1A1A26;
+      --accent:      #E63946;
+      --accent-dim:  rgba(230, 57, 70, 0.15);
+      --accent-glow: rgba(230, 57, 70, 0.35);
+      --text-primary:   #F0F0F5;
+      --text-secondary: #8A8A9A;
+      --text-muted:     #50505F;
+      --border:      rgba(255,255,255,0.07);
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-body:    'Inter', sans-serif;
+      --radius-card:  12px;
+      --transition:   0.22s ease;
     }
 
-    .card {
-      background: #1a1a1a; border-radius: 10px; overflow: hidden;
-      text-decoration: none; color: inherit; transition: transform 0.2s;
+    /* ── Reset & Base ───────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
     }
-    .card:hover { transform: translateY(-4px); }
-    .card-poster {
-      width: 100%; aspect-ratio: 2/3; background: #2a2a2a;
+
+    a { text-decoration: none; color: inherit; }
+
+    /* ── Scrollbar ──────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: var(--bg-elevated); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* ── Navbar ─────────────────────────────────────────── */
+    .navbar {
+      background: linear-gradient(180deg, rgba(10,10,15,0.98) 0%, rgba(10,10,15,0.0) 100%);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid transparent;
+      padding: 14px 0;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    .navbar.scrolled {
+      background: rgba(10,10,15,0.97);
+      border-bottom-color: var(--border);
+    }
+
+    .navbar-brand {
+      font-family: var(--font-display);
+      font-size: 1.9rem;
+      letter-spacing: 2px;
+      color: var(--text-primary) !important;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .navbar-brand span {
+      color: var(--accent);
+    }
+
+    .nav-search {
+      position: relative;
+      max-width: 300px;
+      width: 100%;
+    }
+
+    .nav-search input {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      color: var(--text-primary);
+      padding: 8px 40px 8px 18px;
+      font-size: 0.875rem;
+      font-family: var(--font-body);
+      width: 100%;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      outline: none;
+    }
+
+    .nav-search input::placeholder { color: var(--text-muted); }
+    .nav-search input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .nav-search-btn {
+      position: absolute;
+      right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      transition: color var(--transition);
+    }
+    .nav-search-btn:hover { color: var(--accent); }
+
+    /* ── Hero Banner ────────────────────────────────────── */
+    .hero {
+      position: relative;
+      min-height: 88vh;
+      display: flex;
+      align-items: flex-end;
+      padding-bottom: 80px;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        135deg,
+        #0A0A0F 0%,
+        #16101A 40%,
+        #1A0A10 100%
+      );
+      z-index: 0;
+    }
+
+    /* Animated cinema grain overlay */
+    .hero-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* Decorative accent lines */
+    .hero-accent {
+      position: absolute;
+      top: 0; right: 0;
+      width: 55%;
+      height: 100%;
+      background: radial-gradient(ellipse at 80% 40%, rgba(230,57,70,0.12) 0%, transparent 65%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(230,57,70,0.3);
+      border-radius: 50px;
+      padding: 5px 14px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    .hero-eyebrow .dot {
+      width: 7px; height: 7px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.75); }
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(3rem, 8vw, 6rem);
+      letter-spacing: 3px;
+      line-height: 1.0;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+    }
+
+    .hero-title .line-accent { color: var(--accent); }
+
+    .hero-desc {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      max-width: 520px;
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 36px;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-num {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      letter-spacing: 2px;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary-cine {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      padding: 13px 32px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      font-family: var(--font-body);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    .btn-primary-cine:hover {
+      background: #c62833;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px var(--accent-glow);
+      color: #fff;
+    }
+
+    .btn-ghost-cine {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 13px 32px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      font-family: var(--font-body);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background var(--transition), border-color var(--transition), transform var(--transition);
+      backdrop-filter: blur(4px);
+    }
+
+    .btn-ghost-cine:hover {
+      background: var(--bg-elevated);
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-2px);
+      color: var(--text-primary);
+    }
+
+    /* Hero scroll indicator */
+    .hero-scroll {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      z-index: 2;
+      animation: scrollBounce 2.5s ease-in-out infinite;
+    }
+
+    @keyframes scrollBounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(8px); }
+    }
+
+    /* ── Banner Movie Card ──────────────────────────────── */
+    .banner-movie-col {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    .banner-card {
+      position: relative;
+      width: 220px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow:
+        0 40px 80px rgba(0,0,0,0.7),
+        0 0 0 1px rgba(255,255,255,0.07),
+        0 0 60px var(--accent-glow);
+      transform: perspective(800px) rotateY(-6deg) rotateX(2deg);
+      transition: transform 0.4s ease, box-shadow 0.4s ease;
+      text-decoration: none;
+      display: block;
+      flex-shrink: 0;
+    }
+
+    .banner-card:hover {
+      transform: perspective(800px) rotateY(0deg) rotateX(0deg) translateY(-8px);
+      box-shadow:
+        0 50px 90px rgba(0,0,0,0.75),
+        0 0 0 1px rgba(230,57,70,0.3),
+        0 0 80px var(--accent-glow);
+    }
+
+    .banner-card-poster {
+      aspect-ratio: 2/3;
+      background: var(--bg-elevated);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .banner-card-poster img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .banner-card-placeholder {
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text-muted);
+      background: linear-gradient(145deg, #16161F, #1E1E2E);
+      min-height: 330px;
+    }
+    .banner-card-placeholder i { font-size: 2.8rem; opacity: 0.35; }
+
+    .banner-card-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(10,10,15,0.92) 0%, rgba(10,10,15,0.1) 55%, transparent 100%);
+    }
+
+    .banner-card-info {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 18px 16px 16px;
+    }
+
+    .banner-card-title {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      letter-spacing: 1.5px;
+      color: var(--text-primary);
+      line-height: 1.2;
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .banner-card-meta {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .banner-play-badge {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      width: 58px; height: 58px;
+      background: var(--accent);
+      border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 2.5rem;
+      color: #fff;
+      font-size: 1.3rem;
+      transition: transform 0.28s ease, opacity 0.28s ease;
+      opacity: 0;
+      box-shadow: 0 6px 24px var(--accent-glow);
     }
-    .card-poster img { width: 100%; height: 100%; object-fit: cover; }
-    .card-info { padding: 10px 12px; }
-    .card-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; }
-    .card-meta { font-size: 0.8rem; color: #888; }
 
-    .empty { text-align: center; padding: 60px; color: #666; }
+    .banner-play-badge i { margin-left: 3px; }
+
+    .banner-card:hover .banner-play-badge {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+
+    /* Floating label above the card */
+    .banner-label {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 50px;
+      white-space: nowrap;
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+
+    @media (max-width: 991px) {
+      .banner-movie-col { display: none; }
+    }
+
+    /* ── Genre Filter Bar ───────────────────────────────── */
+    .genre-bar {
+      background: var(--bg-base);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 64px;
+      z-index: 900;
+    }
+
+    .genre-scroller {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 14px 0;
+      scrollbar-width: none;
+    }
+    .genre-scroller::-webkit-scrollbar { display: none; }
+
+    .genre-pill {
+      flex-shrink: 0;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 50px;
+      padding: 6px 18px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      font-family: var(--font-body);
+      cursor: pointer;
+      text-decoration: none;
+      transition: background var(--transition), border-color var(--transition), color var(--transition);
+      white-space: nowrap;
+      display: inline-block;
+    }
+
+    .genre-pill:hover {
+      background: var(--bg-elevated);
+      border-color: rgba(255,255,255,0.15);
+      color: var(--text-primary);
+    }
+
+    .genre-pill.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 12px var(--accent-glow);
+    }
+
+    /* ── Section Headers ────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      letter-spacing: 2px;
+      color: var(--text-primary);
+    }
+
+    .section-title .accent-dot {
+      color: var(--accent);
+      margin-left: 2px;
+    }
+
+    .section-count {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Movie Cards ────────────────────────────────────── */
+    .movie-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+      gap: 20px;
+    }
+
+    .movie-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition);
+      border: 1px solid var(--border);
+    }
+
+    .movie-card:hover {
+      transform: translateY(-6px) scale(1.01);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(230,57,70,0.2);
+      border-color: rgba(230,57,70,0.25);
+    }
+
+    .movie-card:hover .card-overlay { opacity: 1; }
+    .movie-card:hover .card-play-btn { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+
+    /* Poster */
+    .card-poster {
+      position: relative;
+      aspect-ratio: 2/3;
+      background: var(--bg-elevated);
+      overflow: hidden;
+    }
+
+    .card-poster img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+
+    .movie-card:hover .card-poster img { transform: scale(1.06); }
+
+    .card-poster-placeholder {
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--text-muted);
+      background: linear-gradient(145deg, #16161F, #1E1E2E);
+    }
+
+    .card-poster-placeholder i { font-size: 2.5rem; }
+    .card-poster-placeholder span {
+      font-size: 0.65rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    /* Overlay */
+    .card-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(10,10,15,0.9) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    /* Play button */
+    .card-play-btn {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.7);
+      opacity: 0;
+      width: 52px; height: 52px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff;
+      font-size: 1.1rem;
+      transition: transform 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    .card-play-btn i { margin-left: 3px; }
+
+    /* Rating badge */
+    .card-rating {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #FFD700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* New badge */
+    .card-badge {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: var(--accent);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #fff;
+    }
+
+    /* Card body */
+    .card-body-cine {
+      padding: 14px;
+    }
+
+    .card-title-cine {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+
+    .card-meta-cine {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .meta-sep {
+      width: 3px; height: 3px;
+      background: var(--text-muted);
+      border-radius: 50%;
+    }
+
+    .genre-tag {
+      font-size: 0.7rem;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* ── Empty State ────────────────────────────────────── */
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+      font-size: 3.5rem;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .empty-state-title {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      letter-spacing: 2px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .empty-state-desc {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Footer ─────────────────────────────────────────── */
+    .site-footer {
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      padding: 40px 0 24px;
+      margin-top: 80px;
+    }
+
+    .footer-brand {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      letter-spacing: 2px;
+    }
+
+    .footer-brand span { color: var(--accent); }
+
+    .footer-tagline {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .footer-divider {
+      border-color: var(--border);
+      margin: 24px 0 20px;
+    }
+
+    .footer-copy {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* ── Search result header ───────────────────────────── */
+    .search-result-bar {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .search-query-text {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .search-query-text strong {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .search-clear {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: color var(--transition);
+    }
+
+    .search-clear:hover { color: var(--accent); }
+
+    /* ── Utility ─────────────────────────────────────────── */
+    .pt-navbar { padding-top: 92px; }
+
+    @media (max-width: 768px) {
+      .hero { min-height: 70vh; padding-bottom: 60px; }
+      .hero-stats { gap: 24px; }
+      .movie-grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 14px; }
+      .navbar-brand { font-size: 1.5rem; }
+    }
+
+    @media (max-width: 480px) {
+      .movie-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    }
+
+    /* Focus states */
+    .movie-card:focus-visible,
+    .genre-pill:focus-visible,
+    .btn-primary-cine:focus-visible,
+    .btn-ghost-cine:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+    }
   </style>
 </head>
 <body>
-<header>
-  <h1>🎬 KinoSayt</h1>
-  <form class="search-form" method="get">
-    <input type="text" name="q" value="{{ q }}" placeholder="Kino qidirish...">
-    <button type="submit">Qidirish</button>
-  </form>
-</header>
 
+<!-- ── Navbar ──────────────────────────────────────────── -->
+<nav class="navbar" id="mainNav">
+  <div class="container">
+    <div class="d-flex align-items-center justify-content-between w-100 gap-3">
+
+      <a href="{% url 'home' %}" class="navbar-brand">
+        CINE<span>UZ</span>
+      </a>
+
+      <form class="nav-search" method="get" action="{% url 'home' %}">
+        {% if genre %}<input type="hidden" name="genre" value="{{ genre }}">{% endif %}
+        <input
+          type="text"
+          name="q"
+          value="{{ q }}"
+          placeholder="Kino, janr, yil..."
+          aria-label="Kino qidirish"
+        >
+        <button type="submit" class="nav-search-btn" aria-label="Qidirish">
+          <i class="bi bi-search" style="font-size:0.9rem;"></i>
+        </button>
+      </form>
+
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero Section ────────────────────────────────────── -->
+{% if not q and not genre %}
+<section class="hero" aria-label="Asosiy banner">
+  <div class="hero-bg"></div>
+  <div class="hero-accent"></div>
+
+  <div class="container hero-content pt-5">
+    <div class="row align-items-end g-4">
+
+      <!-- Left: Text content -->
+      <div class="col-lg-7 col-md-8">
+        <br>
+        <div class="hero-eyebrow">
+          <span class="dot"></span>
+          Yangi kinolar mavjud
+        </div>
+
+        <h1 class="hero-title">
+          UZBEK<br>
+          <span class="line-accent">KINO</span><br>
+          DUNYOSI
+        </h1>
+
+        <p class="hero-desc">
+          Eng sara kinolarni sifatli formatda tomosha qiling.
+          Yangi premyeralar, klassiklar va ko'plab janrlar — barchasi bir joyda.
+        </p>
+
+        <div class="hero-stats">
+          <div class="stat-item">
+            <span class="stat-num">{{ movies|length }}+</span>
+            <span class="stat-label">Kinolar</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-num">{{ genres|length }}</span>
+            <span class="stat-label">Janrlar</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-num">HD</span>
+            <span class="stat-label">Sifat</span>
+          </div>
+        </div>
+
+        <div class="hero-cta">
+          {% if banner_movie %}
+          <a href="{% url 'movie_detail' banner_movie.id %}" class="btn-primary-cine">
+            <i class="bi bi-play-fill"></i>
+            Tomosha boshlash
+          </a>
+          {% else %}
+          <a href="#movies-section" class="btn-primary-cine">
+            <i class="bi bi-play-fill"></i>
+            Tomosha boshlash
+          </a>
+          {% endif %}
+          <a href="#movies-section" class="btn-ghost-cine">
+            <i class="bi bi-grid-3x3-gap"></i>
+            Barcha kinolar
+          </a>
+        </div>
+      </div>
+
+      <!-- Right: Banner movie poster card -->
+      {% if banner_movie %}
+      <div class="col-lg-5 col-md-4 banner-movie-col pb-4">
+        <div style="position:relative; display:inline-block;">
+          <div class="banner-label">
+            <i class="bi bi-fire" style="margin-right:4px;"></i>Eng yangi
+          </div>
+          <a href="{% url 'movie_detail' banner_movie.id %}" class="banner-card">
+            <div class="banner-card-poster">
+              {% if banner_movie.poster %}
+                <img src="{{ banner_movie.poster.url }}" alt="{{ banner_movie.title }}">
+              {% else %}
+                <div class="banner-card-placeholder">
+                  <i class="bi bi-camera-video"></i>
+                </div>
+              {% endif %}
+              <div class="banner-card-overlay"></div>
+              <div class="banner-play-badge"><i class="bi bi-play-fill"></i></div>
+            </div>
+            <div class="banner-card-info">
+              <div class="banner-card-title">{{ banner_movie.title }}</div>
+              <div class="banner-card-meta">
+                {% if banner_movie.year %}<span>{{ banner_movie.year }}</span>{% endif %}
+                {% if banner_movie.year and banner_movie.genre %}<span style="width:3px;height:3px;background:var(--text-muted);border-radius:50%;display:inline-block;"></span>{% endif %}
+                {% if banner_movie.genre %}<span style="color:var(--accent);">{{ banner_movie.genre }}</span>{% endif %}
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <div class="hero-scroll">
+    <i class="bi bi-chevron-down"></i>
+  </div>
+</section>
+{% endif %}
+
+
+<!-- ── Genre Filter Bar ────────────────────────────────── -->
 {% if genres %}
-<div class="genres">
-  <a href="?" class="{% if not genre %}active{% endif %}">Barchasi</a>
-  {% for g in genres %}
-  {% if g %}
-  <a href="?genre={{ g }}" class="{% if genre == g %}active{% endif %}">{{ g }}</a>
-  {% endif %}
-  {% endfor %}
+<div class="genre-bar {% if q or genre %}pt-navbar{% endif %}">
+  <div class="container">
+    <div class="genre-scroller" role="navigation" aria-label="Janr filterlari">
+      <a
+        href="{% if q %}?q={{ q }}{% else %}?{% endif %}"
+        class="genre-pill {% if not genre %}active{% endif %}"
+      >Barchasi</a>
+
+      {% for g in genres %}
+        {% if g %}
+        <a
+          href="?genre={{ g }}{% if q %}&q={{ q }}{% endif %}"
+          class="genre-pill {% if genre == g %}active{% endif %}"
+        >{{ g }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
 </div>
 {% endif %}
 
-<div class="grid">
-  {% for movie in movies %}
-  <a class="card" href="{% url 'movie_detail' movie.pk %}">
-    <div class="card-poster">
-      {% if movie.poster %}
-      <img src="{{ movie.poster.url }}" alt="{{ movie.title }}">
+
+<!-- ── Main Content ────────────────────────────────────── -->
+<main class="container pt-4 pb-5" id="movies-section">
+
+  <!-- Search result info -->
+  {% if q or genre %}
+  <div class="search-result-bar">
+    <span class="search-query-text">
+      {% if q %}
+        <strong>"{{ q }}"</strong> bo'yicha natijalar
+        {% if genre %} · <strong>{{ genre }}</strong>{% endif %}
       {% else %}
-      🎥
+        <strong>{{ genre }}</strong> janridagi kinolar
       {% endif %}
+      <span class="ms-2 text-muted" style="font-size:0.8rem;">— {{ movies|length }} ta topildi</span>
+    </span>
+    <a href="{% url 'home' %}" class="search-clear">
+      <i class="bi bi-x-circle"></i>
+      Tozalash
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- Section header (only on browsing, no search) -->
+  {% if not q %}
+  <div class="section-header">
+    <h2 class="section-title">
+      {% if genre %}{{ genre }}{% else %}Barcha Kinolar{% endif %}<span class="accent-dot">.</span>
+    </h2>
+    <span class="section-count">{{ movies|length }} ta kino</span>
+  </div>
+  {% endif %}
+
+  <!-- Movie Grid -->
+  <div class="movie-grid" role="list">
+    {% for movie in movies %}
+    <a
+      class="movie-card"
+      href="{% url 'movie_detail' movie.pk %}"
+      role="listitem"
+      aria-label="{{ movie.title }}"
+      tabindex="0"
+    >
+      <!-- Poster -->
+      <div class="card-poster">
+        {% if movie.poster %}
+          <img
+            src="{{ movie.poster.url }}"
+            alt="{{ movie.title }} poster"
+            loading="lazy"
+          >
+        {% else %}
+          <div class="card-poster-placeholder">
+            <i class="bi bi-camera-video"></i>
+            <span>Poster yo'q</span>
+          </div>
+        {% endif %}
+
+        <div class="card-overlay"></div>
+
+        <div class="card-play-btn" aria-hidden="true">
+          <i class="bi bi-play-fill"></i>
+        </div>
+
+        <!-- Rating -->
+        {% if movie.rating %}
+        <div class="card-rating" aria-label="Reyting {{ movie.rating }}">
+          <i class="bi bi-star-fill" style="font-size:0.65rem;"></i>
+          {{ movie.rating }}
+        </div>
+        {% endif %}
+
+        <!-- New badge for recent movies -->
+        {% if movie.id and movie.id >= movies.0.id|add:"-5" %}
+        <div class="card-badge">Yangi</div>
+        {% endif %}
+      </div>
+
+      <!-- Info -->
+      <div class="card-body-cine">
+        <div class="card-title-cine" title="{{ movie.title }}">{{ movie.title }}</div>
+        <div class="card-meta-cine">
+          {% if movie.year %}
+            <span>{{ movie.year }}</span>
+            <span class="meta-sep"></span>
+          {% endif %}
+          {% if movie.genre %}
+            <span class="genre-tag">{{ movie.genre }}</span>
+          {% else %}
+            <span class="genre-tag">Kino</span>
+          {% endif %}
+          {% if movie.views %}
+            <span class="meta-sep"></span>
+            <span><i class="bi bi-eye" style="font-size:0.7rem;"></i> {{ movie.views }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+
+    {% empty %}
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <i class="bi bi-film"></i>
+      </div>
+      <div class="empty-state-title">Hech narsa topilmadi</div>
+      <p class="empty-state-desc">
+        Boshqa kalit so'z bilan qidirib ko'ring yoki
+        <a href="{% url 'home' %}" style="color:var(--accent);">barcha kinolarga</a> qayting.
+      </p>
     </div>
-    <div class="card-info">
-      <div class="card-title">{{ movie.title }}</div>
-      <div class="card-meta">
-        {% if movie.year %}{{ movie.year }} · {% endif %}
-        {{ movie.genre|default:"Kino" }}
+    {% endfor %}
+  </div>
+
+</main>
+
+
+<!-- ── Footer ──────────────────────────────────────────── -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-md-6 mb-3 mb-md-0">
+        <div class="footer-brand">CINE<span>UZ</span></div>
+        <div class="footer-tagline">Eng sara kinolar — bir platformada</div>
+      </div>
+      <div class="col-md-6 text-md-end">
+        <div class="d-flex justify-content-md-end gap-3">
+          <a href="{% url 'home' %}" class="genre-pill">Bosh sahifa</a>
+          {% for g in genres %}{% if g %}<a href="?genre={{ g }}" class="genre-pill">{{ g }}</a>{% endif %}{% endfor %}
+        </div>
       </div>
     </div>
-  </a>
-  {% empty %}
-  <div class="empty" style="grid-column: 1/-1">Hech narsa topilmadi 😔</div>
-  {% endfor %}
-</div>
+    <hr class="footer-divider">
+    <p class="footer-copy">&copy; 2025 CineUZ. Barcha huquqlar himoyalangan.</p>
+  </div>
+</footer>
+
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  // Navbar scroll effect
+  const nav = document.getElementById('mainNav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 20);
+  }, { passive: true });
+
+  // Smooth scroll for hero CTA
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
 
 </body>
 </html>

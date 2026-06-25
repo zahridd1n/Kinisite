@@ -1,74 +1,1031 @@
-<!-- movies/templates/movies/detail.html -->
+{% load static %}
 <!DOCTYPE html>
 <html lang="uz">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ movie.title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ movie.title }} — CineUZ</title>
+  <meta name="description" content="{{ movie.description|truncatechars:160 }}">
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0f0f0f; color: #e0e0e0; font-family: sans-serif; }
+    /* ── Design Tokens (same as index) ─────────────────── */
+    :root {
+      --bg-base:        #0A0A0F;
+      --bg-card:        #12121A;
+      --bg-elevated:    #1A1A26;
+      --accent:         #E63946;
+      --accent-dim:     rgba(230, 57, 70, 0.15);
+      --accent-glow:    rgba(230, 57, 70, 0.35);
+      --text-primary:   #F0F0F5;
+      --text-secondary: #8A8A9A;
+      --text-muted:     #50505F;
+      --border:         rgba(255,255,255,0.07);
+      --font-display:   'Bebas Neue', sans-serif;
+      --font-body:      'Inter', sans-serif;
+      --radius-card:    12px;
+      --transition:     0.22s ease;
+    }
 
-    .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
 
-    h1 { font-size: 1.6rem; margin-bottom: 8px; }
-    .meta { color: #aaa; font-size: 0.9rem; margin-bottom: 16px; }
-    .meta span { margin-right: 16px; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
 
-    /* Video player */
+    a { text-decoration: none; color: inherit; }
+
+    ::-webkit-scrollbar { width: 6px; height: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: var(--bg-elevated); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* ── Navbar ──────────────────────────────────────────── */
+    .navbar {
+      background: rgba(10,10,15,0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 0;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+    }
+
+    .navbar-brand {
+      font-family: var(--font-display);
+      font-size: 1.9rem;
+      letter-spacing: 2px;
+      color: var(--text-primary);
+    }
+    .navbar-brand span { color: var(--accent); }
+
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 7px 18px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: background var(--transition), color var(--transition), border-color var(--transition);
+    }
+    .btn-back:hover {
+      background: var(--bg-card);
+      border-color: rgba(255,255,255,0.14);
+      color: var(--text-primary);
+    }
+
+    /* ── Hero / Backdrop ─────────────────────────────────── */
+    .detail-hero {
+      position: relative;
+      padding-top: 64px; /* navbar height */
+      min-height: 420px;
+      display: flex;
+      align-items: flex-end;
+      overflow: hidden;
+    }
+
+    .backdrop-blur {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+    }
+
+    /* If poster exists, it'll be blurred behind via JS */
+    .backdrop-blur.has-poster {
+      background-size: cover;
+      background-position: center 20%;
+      filter: blur(28px) brightness(0.28) saturate(1.4);
+      transform: scale(1.08);
+    }
+
+    .backdrop-blur.no-poster {
+      background: linear-gradient(135deg, #0A0A0F 0%, #16101A 50%, #1A0A10 100%);
+    }
+
+    .backdrop-fade {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(10,10,15,0.3) 0%,
+        rgba(10,10,15,0.65) 60%,
+        rgba(10,10,15,1) 100%
+      );
+      z-index: 1;
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      padding: 40px 0 0;
+    }
+
+    /* ── Main Layout ─────────────────────────────────────── */
+    .detail-layout {
+      position: relative;
+      z-index: 2;
+      padding-bottom: 80px;
+    }
+
+    /* ── Poster Card ─────────────────────────────────────── */
+    .poster-wrap {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px var(--border);
+      background: var(--bg-elevated);
+      aspect-ratio: 2/3;
+    }
+
+    .poster-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .poster-placeholder {
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text-muted);
+      background: linear-gradient(145deg, #16161F, #1E1E2E);
+      min-height: 280px;
+    }
+
+    .poster-placeholder i { font-size: 3rem; opacity: 0.4; }
+    .poster-placeholder span { font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; opacity: 0.4; }
+
+    /* ── Meta Info Block ─────────────────────────────────── */
+    .movie-eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .badge-genre {
+      background: var(--accent-dim);
+      border: 1px solid rgba(230,57,70,0.35);
+      color: var(--accent);
+      border-radius: 50px;
+      padding: 4px 14px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-year {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 50px;
+      padding: 4px 14px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .movie-main-title {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 3.8rem);
+      letter-spacing: 3px;
+      line-height: 1.0;
+      color: var(--text-primary);
+      margin-bottom: 18px;
+    }
+
+    .movie-stats-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .stat-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+
+    .stat-chip i { color: var(--text-muted); font-size: 0.85rem; }
+    .stat-chip.rating-chip i { color: #FFD700; }
+
+    .stat-divider {
+      width: 4px; height: 4px;
+      background: var(--text-muted);
+      border-radius: 50%;
+    }
+
+    .movie-desc {
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+      line-height: 1.75;
+      margin-bottom: 28px;
+      max-width: 560px;
+    }
+
+    /* CTA Buttons */
+    .detail-cta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+
+    .btn-play {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      padding: 13px 32px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      font-family: var(--font-body);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+    .btn-play:hover {
+      background: #c62833;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px var(--accent-glow);
+      color: #fff;
+    }
+
+    .btn-outline-cine {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 13px 28px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      font-family: var(--font-body);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      transition: background var(--transition), border-color var(--transition), transform var(--transition);
+    }
+    .btn-outline-cine:hover {
+      background: var(--bg-elevated);
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-2px);
+      color: var(--text-primary);
+    }
+
+    /* ── Video Player Section ────────────────────────────── */
+    .player-section {
+      margin-top: 40px;
+    }
+
+    .section-label {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      letter-spacing: 2px;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
     .player-wrap {
       background: #000;
-      border-radius: 10px;
+      border-radius: 14px;
       overflow: hidden;
-      margin-bottom: 20px;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
       position: relative;
     }
-    video {
+
+    .player-wrap video {
       width: 100%;
       display: block;
-      max-height: 70vh;
+      max-height: 72vh;
+      background: #000;
     }
 
-    .description {
-      line-height: 1.7;
-      color: #ccc;
-      margin-top: 16px;
+    /* Custom video controls overlay hint */
+    .player-overlay-hint {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(10,10,15,0.75);
+      backdrop-filter: blur(6px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 0.5s ease;
     }
 
-    a { color: #4a9eff; text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    .player-wrap:hover .player-overlay-hint { opacity: 0; }
 
-    .back { display: inline-block; margin-bottom: 16px; }
+    /* ── Info Tabs ───────────────────────────────────────── */
+    .info-tabs {
+      margin-top: 40px;
+    }
+
+    .tab-nav {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 28px;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: color var(--transition), border-color var(--transition);
+      text-transform: uppercase;
+      margin-bottom: -1px;
+    }
+
+    .tab-btn.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-btn:hover:not(.active) { color: var(--text-secondary); }
+
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ── Description Tab ─────────────────────────────────── */
+    .description-text {
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+      line-height: 1.85;
+      max-width: 680px;
+    }
+
+    .description-text p { margin-bottom: 12px; }
+
+    /* ── Comments Section ────────────────────────────────── */
+    .comments-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+
+    .comment-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 18px 20px;
+      transition: border-color var(--transition);
+    }
+
+    .comment-card:hover { border-color: rgba(255,255,255,0.1); }
+
+    .comment-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .comment-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #7B2FFF);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .comment-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .comment-date {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .comment-text {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+
+    /* Empty comments */
+    .no-comments {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-muted);
+    }
+
+    .no-comments i { font-size: 2.2rem; display: block; margin-bottom: 12px; opacity: 0.35; }
+    .no-comments p { font-size: 0.85rem; }
+
+    /* ── Comment Form ────────────────────────────────────── */
+    .comment-form-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+    }
+
+    .form-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-title i { color: var(--accent); }
+
+    .cine-input, .cine-textarea {
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      padding: 11px 16px;
+      font-size: 0.875rem;
+      font-family: var(--font-body);
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      resize: none;
+    }
+
+    .cine-input::placeholder, .cine-textarea::placeholder { color: var(--text-muted); }
+    .cine-input:focus, .cine-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .cine-textarea { min-height: 110px; }
+
+    .form-label-cine {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .btn-submit-comment {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      padding: 11px 28px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: var(--font-body);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+    .btn-submit-comment:hover {
+      background: #c62833;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px var(--accent-glow);
+    }
+
+    /* ── Related Movies ──────────────────────────────────── */
+    .related-section {
+      margin-top: 56px;
+      padding-top: 40px;
+      border-top: 1px solid var(--border);
+    }
+
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+      gap: 18px;
+    }
+
+    /* Reuse movie card styles from index */
+    .movie-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+      border: 1px solid var(--border);
+      display: block;
+      color: inherit;
+    }
+
+    .movie-card:hover {
+      transform: translateY(-5px) scale(1.01);
+      box-shadow: 0 18px 36px rgba(0,0,0,0.55), 0 0 0 1px rgba(230,57,70,0.2);
+      border-color: rgba(230,57,70,0.25);
+      color: inherit;
+    }
+
+    .movie-card:hover .card-overlay { opacity: 1; }
+    .movie-card:hover .card-play-btn { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+    .movie-card:hover .rc-poster img { transform: scale(1.06); }
+
+    .rc-poster {
+      position: relative;
+      aspect-ratio: 2/3;
+      background: var(--bg-elevated);
+      overflow: hidden;
+    }
+
+    .rc-poster img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+
+    .rc-placeholder {
+      width: 100%; height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(145deg, #16161F, #1E1E2E);
+      color: var(--text-muted);
+      font-size: 1.8rem;
+    }
+
+    .card-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(10,10,15,0.9) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .card-play-btn {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%) scale(0.7);
+      opacity: 0;
+      width: 46px; height: 46px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff;
+      font-size: 1rem;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+
+    .card-play-btn i { margin-left: 3px; }
+
+    .rc-info {
+      padding: 12px;
+    }
+
+    .rc-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+
+    .rc-meta {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Footer ──────────────────────────────────────────── */
+    .site-footer {
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      padding: 30px 0 20px;
+      margin-top: 60px;
+    }
+
+    .footer-brand { font-family: var(--font-display); font-size: 1.4rem; letter-spacing: 2px; }
+    .footer-brand span { color: var(--accent); }
+    .footer-copy { font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 18px; }
+    .footer-divider { border-color: var(--border); margin: 18px 0 14px; }
+
+    /* ── Responsive ──────────────────────────────────────── */
+    @media (max-width: 767px) {
+      .movie-main-title { font-size: 2rem; }
+      .detail-cta { flex-direction: column; }
+      .btn-play, .btn-outline-cine { justify-content: center; }
+      .tab-btn { padding: 10px 14px; font-size: 0.78rem; }
+      .related-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+    }
   </style>
 </head>
 <body>
-<div class="container">
-  <a href="{% url 'home' %}" class="back">← Barcha kinolar</a>
 
-  <h1>{{ movie.title }}</h1>
-  <div class="meta">
-    {% if movie.year %}<span>📅 {{ movie.year }}</span>{% endif %}
-    {% if movie.genre %}<span>🎬 {{ movie.genre }}</span>{% endif %}
-    <span>👁 {{ movie.views }} marta ko'rilgan</span>
+<!-- ── Navbar ─────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="container">
+    <div class="d-flex align-items-center justify-content-between">
+      <a href="{% url 'home' %}" class="navbar-brand">CINE<span>UZ</span></a>
+      <a href="{% url 'home' %}" class="btn-back">
+        <i class="bi bi-arrow-left"></i>
+        Barcha kinolar
+      </a>
+    </div>
   </div>
+</nav>
 
-  <div class="player-wrap">
-    <video
-      controls
-      preload="metadata"
-      playsinline
-    >
-      <source src="{% url 'stream_video' movie.pk %}" type="video/mp4">
-      Brauzeringiz video ni qo'llab-quvvatlamaydi.
-    </video>
-  </div>
-
-  {% if movie.description %}
-  <div class="description">
-    <strong>Tavsif:</strong><br>
-    {{ movie.description|linebreaks }}
-  </div>
-  {% endif %}
+<!-- ── Detail Hero (Backdrop) ─────────────────────────── -->
+<div class="detail-hero" id="detailHero">
+  <div class="backdrop-blur {% if movie.poster %}has-poster{% else %}no-poster{% endif %}"
+       id="backdropEl"
+       {% if movie.poster %}style="background-image: url('{{ movie.poster.url }}')"{% endif %}
+  ></div>
+  <div class="backdrop-fade"></div>
 </div>
+
+<!-- ── Main Detail Layout ─────────────────────────────── -->
+<div class="detail-layout">
+  <div class="container">
+    <div class="row g-4 g-lg-5 align-items-start">
+
+      <!-- Poster Column -->
+      <div class="col-sm-5 col-md-4 col-lg-3">
+        <div class="poster-wrap">
+          {% if movie.poster %}
+            <img src="{{ movie.poster.url }}" alt="{{ movie.title }} poster">
+          {% else %}
+            <div class="poster-placeholder">
+              <i class="bi bi-camera-video"></i>
+              <span>Poster yo'q</span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Info Column -->
+      <div class="col-sm-7 col-md-8 col-lg-9">
+        <div class="hero-inner">
+
+          <!-- Badges -->
+          <div class="movie-eyebrow">
+            {% if movie.genre %}
+              <span class="badge-genre">{{ movie.genre }}</span>
+            {% endif %}
+            {% if movie.year %}
+              <span class="badge-year">{{ movie.year }}</span>
+            {% endif %}
+          </div>
+
+          <!-- Title -->
+          <h1 class="movie-main-title">{{ movie.title }}</h1>
+
+          <!-- Stats row -->
+          <div class="movie-stats-row">
+            {% if movie.rating %}
+            <div class="stat-chip rating-chip">
+              <i class="bi bi-star-fill"></i>
+              <span>{{ movie.rating }}</span>
+            </div>
+            <span class="stat-divider"></span>
+            {% endif %}
+
+            <div class="stat-chip">
+              <i class="bi bi-eye"></i>
+              <span>{{ movie.views }} marta ko'rilgan</span>
+            </div>
+
+            {% if movie.duration %}
+            <span class="stat-divider"></span>
+            <div class="stat-chip">
+              <i class="bi bi-clock"></i>
+              <span>{{ movie.duration }} daq</span>
+            </div>
+            {% endif %}
+
+            {% if movie.language %}
+            <span class="stat-divider"></span>
+            <div class="stat-chip">
+              <i class="bi bi-translate"></i>
+              <span>{{ movie.language }}</span>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Short description -->
+          {% if movie.description %}
+          <p class="movie-desc">{{ movie.description|truncatechars:220 }}</p>
+          {% endif %}
+
+          <!-- CTAs -->
+          <div class="detail-cta">
+            <a href="#player-section" class="btn-play" id="watchBtn">
+              <i class="bi bi-play-fill"></i>
+              Tomosha qilish
+            </a>
+            <button class="btn-outline-cine" id="shareBtn" onclick="shareMovie()">
+              <i class="bi bi-share"></i>
+              Ulashish
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /row -->
+
+    <!-- ── Video Player ─────────────────────────────────── -->
+    <div class="player-section" id="player-section">
+      <div class="section-label">
+        <i class="bi bi-play-circle" style="color:var(--accent);"></i>
+        Tomosha
+      </div>
+
+      <div class="player-wrap">
+        <video
+          id="mainVideo"
+          controls
+          preload="metadata"
+          playsinline
+          poster="{% if movie.poster %}{{ movie.poster.url }}{% endif %}"
+        >
+          <source src="{% url 'stream_video' movie.pk %}" type="video/mp4">
+          <p style="color:var(--text-muted); padding:20px; text-align:center;">
+            Brauzeringiz video formatini qo'llab-quvvatlamaydi.
+          </p>
+        </video>
+        <div class="player-overlay-hint">
+          <i class="bi bi-fullscreen" style="margin-right:4px;"></i> To'liq ekran uchun F tugmasi
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Info Tabs ────────────────────────────────────── -->
+    <div class="info-tabs">
+      <div class="tab-nav" role="tablist">
+        <button class="tab-btn active" role="tab" data-tab="tab-desc" aria-selected="true">
+          Tavsif
+        </button>
+        <button class="tab-btn" role="tab" data-tab="tab-comments" aria-selected="false">
+          Izohlar
+          {% if comments %}
+            <span style="color:var(--accent); margin-left:4px; font-size:0.8em;">({{ comments|length }})</span>
+          {% endif %}
+        </button>
+      </div>
+
+      <!-- Description Tab -->
+      <div class="tab-pane active" id="tab-desc">
+        {% if movie.description %}
+          <div class="description-text">
+            {{ movie.description|linebreaks }}
+          </div>
+        {% else %}
+          <p style="color:var(--text-muted); font-size:0.88rem;">Tavsif qo'shilmagan.</p>
+        {% endif %}
+      </div>
+
+      <!-- Comments Tab -->
+      <div class="tab-pane" id="tab-comments">
+
+        <!-- Existing comments -->
+        {% if comments %}
+        <div class="comments-list" id="commentsList">
+          {% for comment in comments %}
+          <div class="comment-card">
+            <div class="comment-header">
+              <div class="comment-avatar">{{ comment.name|first|upper }}</div>
+              <div>
+                <div class="comment-name">{{ comment.name }}</div>
+                {% if comment.created_at %}
+                <div class="comment-date">{{ comment.created_at|date:"d M Y" }}</div>
+                {% endif %}
+              </div>
+            </div>
+            <p class="comment-text">{{ comment.text }}</p>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-comments" id="commentsList">
+          <i class="bi bi-chat-square-text"></i>
+          <p>Hali izoh qoldirilmagan. Birinchi bo'ling!</p>
+        </div>
+        {% endif %}
+
+        <!-- Comment form -->
+        <div class="comment-form-wrap">
+          <div class="form-title">
+            <i class="bi bi-pencil-square"></i>
+            Izoh qoldiring
+          </div>
+
+          <form method="post" action="#tab-comments" id="commentForm">
+            {% csrf_token %}
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label-cine">Ismingiz</label>
+                <input
+                  type="text"
+                  name="name"
+                  class="cine-input"
+                  placeholder="Ismingizni kiriting"
+                  required
+                  maxlength="80"
+                >
+              </div>
+              <div class="col-12">
+                <label class="form-label-cine">Izoh</label>
+                <textarea
+                  name="text"
+                  class="cine-textarea"
+                  placeholder="Kino haqida fikringizni yozing..."
+                  required
+                  maxlength="1000"
+                ></textarea>
+              </div>
+              <div class="col-12">
+                <button type="submit" class="btn-submit-comment">
+                  <i class="bi bi-send"></i>
+                  Yuborish
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+      </div><!-- /tab-comments -->
+    </div><!-- /info-tabs -->
+
+  </div><!-- /container -->
+</div><!-- /detail-layout -->
+
+<!-- ── Related Movies ─────────────────────────────────── -->
+{% if releted_movie %}
+<div class="container">
+  <div class="related-section">
+    <div class="section-label">
+      <i class="bi bi-grid-3x3" style="color:var(--accent);"></i>
+      O'xshash Kinolar
+    </div>
+
+    <div class="related-grid">
+      {% for rm in releted_movie %}
+      {% if rm.pk != movie.pk %}
+      <a class="movie-card" href="{% url 'movie_detail' rm.pk %}">
+        <div class="rc-poster">
+          {% if rm.poster %}
+            <img src="{{ rm.poster.url }}" alt="{{ rm.title }}" loading="lazy">
+          {% else %}
+            <div class="rc-placeholder"><i class="bi bi-camera-video"></i></div>
+          {% endif %}
+          <div class="card-overlay"></div>
+          <div class="card-play-btn"><i class="bi bi-play-fill"></i></div>
+        </div>
+        <div class="rc-info">
+          <div class="rc-title" title="{{ rm.title }}">{{ rm.title }}</div>
+          <div class="rc-meta">
+            {% if rm.year %}{{ rm.year }}{% endif %}
+            {% if rm.year and rm.genre %} · {% endif %}
+            {% if rm.genre %}{{ rm.genre }}{% endif %}
+          </div>
+        </div>
+      </a>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Footer ─────────────────────────────────────────── -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-brand">CINE<span>UZ</span></div>
+    <hr class="footer-divider">
+    <p class="footer-copy">&copy; 2025 CineUZ. Barcha huquqlar himoyalangan.</p>
+  </div>
+</footer>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  // ── Tab switching ──────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.tab;
+
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      document.getElementById(target).classList.add('active');
+    });
+  });
+
+  // ── Smooth scroll to player on "Tomosha" click ────────
+  document.getElementById('watchBtn')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    const player = document.getElementById('player-section');
+    if (player) {
+      player.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(() => {
+        const video = document.getElementById('mainVideo');
+        if (video) video.play().catch(() => {});
+      }, 600);
+    }
+  });
+
+  // ── Share ──────────────────────────────────────────────
+  function shareMovie() {
+    if (navigator.share) {
+      navigator.share({
+        title: '{{ movie.title|escapejs }} — CineUZ',
+        url: window.location.href
+      }).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(window.location.href).then(() => {
+        const btn = document.getElementById('shareBtn');
+        const original = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check2"></i> Nusxalandi!';
+        btn.style.borderColor = 'var(--accent)';
+        btn.style.color = 'var(--accent)';
+        setTimeout(() => {
+          btn.innerHTML = original;
+          btn.style.borderColor = '';
+          btn.style.color = '';
+        }, 2200);
+      });
+    }
+  }
+
+  // ── Auto-open comments tab if POST redirect ────────────
+  if (window.location.hash === '#tab-comments') {
+    document.querySelector('[data-tab="tab-comments"]')?.click();
+    document.getElementById('tab-comments')?.scrollIntoView({ behavior: 'smooth' });
+  }
+</script>
+
 </body>
 </html>

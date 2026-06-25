@@ -16,20 +16,16 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 
 from .models import Movie
-
+from . import models
 
 # ─── Telethon client ──────────────────────────────────────────────────────────
-
 def get_client() -> TelegramClient:
     return TelegramClient(
         StringSession(settings.TELEGRAM_SESSION),
         settings.TELEGRAM_API_ID,
         settings.TELEGRAM_API_HASH,
     )
-
-
 # ─── Fayl hajmini olish ───────────────────────────────────────────────────────
-
 def get_file_size(message_id: int) -> int | None:
     """Telegram dan fayl hajmini oladi (keshlanadi)."""
 
@@ -45,7 +41,6 @@ def get_file_size(message_id: int) -> int | None:
         return loop.run_until_complete(_get())
     finally:
         loop.close()
-
 
 # ─── Real-time stream generator ───────────────────────────────────────────────
 
@@ -98,7 +93,6 @@ def telegram_stream(message_id: int, start: int, end: int):
 
 
 # ─── Stream view ─────────────────────────────────────────────────────────────
-
 def stream_video(request, pk):
     movie = get_object_or_404(Movie, pk=pk, is_active=True)
 
@@ -144,41 +138,7 @@ def stream_video(request, pk):
     return response
 
 
-# ─── Sahifalar ────────────────────────────────────────────────────────────────
-
-def home(request):
-    movies = Movie.objects.filter(is_active=True)
-
-    q = request.GET.get("q", "")
-    if q:
-        movies = movies.filter(title__icontains=q)
-
-    genre = request.GET.get("genre", "")
-    if genre:
-        movies = movies.filter(genre__icontains=genre)
-
-    genres = (
-        Movie.objects.filter(is_active=True)
-        .values_list("genre", flat=True)
-        .distinct()
-    )
-
-    return render(request, "index.html", {
-        "movies": movies,
-        "genres": genres,
-        "q": q,
-        "genre": genre,
-    })
-
-
-def movie_detail(request, pk):
-    movie = get_object_or_404(Movie, pk=pk, is_active=True)
-    Movie.objects.filter(pk=pk).update(views=movie.views + 1)
-    return render(request, "detail.html", {"movie": movie})
-
-
 # ─── Bot API (ichki) ──────────────────────────────────────────────────────────
-
 @csrf_exempt
 @require_http_methods(["POST"])
 def add_file(request):
@@ -215,3 +175,52 @@ def add_file(request):
         {"id": movie.id, "title": movie.title, "created": created},
         status=201 if created else 200,
     )
+
+
+# ─── Sahifalar ────────────────────────────────────────────────────────────────
+def home(request):
+    banner_movie = Movie.objects.filter().order_by('-id').first()
+    movies = Movie.objects.filter(is_active=True)
+
+    q = request.GET.get("q", "")
+    if q:
+        movies = movies.filter(title__icontains=q)
+
+    genre = request.GET.get("genre", "")
+    if genre:
+        movies = movies.filter(genre__icontains=genre)
+
+    genres = models.Category.objects.filter().order_by('?')[:6]
+
+    return render(request, "index.html", {
+        "movies": movies,
+        "genres": genres,
+        "q": q,
+        "genre": genre,
+        "banner_movie":banner_movie
+    })
+
+
+def movie_detail(request, pk):
+    movie = get_object_or_404(Movie, pk=pk, is_active=True)
+    releted_movie = Movie.objects.filter(genre=movie.genre).exclude(pk=pk)
+    comments = models.Comments.objects.filter(movie=movie)
+    Movie.objects.filter(pk=pk).update(views=movie.views + 1)
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        text = request.POST.get('text')
+        comment = models.Comments.objects.create(
+            movie=movie,name=name, text=text )
+
+    context={
+        "movie": movie,
+        "comments":comments,
+        "releted_movie":releted_movie
+    }
+    return render(request, "detail.html", context=context)
+
+
+
+
+
+
