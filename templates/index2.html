@@ -1,0 +1,354 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineUZ — Kinolar</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Custom CSS -->
+  <link href="{% static 'css/index.css' %}" rel="stylesheet">
+</head>
+<body>
+
+<!-- ── Navbar ──────────────────────────────────────────── -->
+<nav class="navbar" id="mainNav">
+  <div class="container">
+    <div class="d-flex align-items-center justify-content-between w-100 gap-3">
+
+      <a href="{% url 'home' %}" class="navbar-brand">
+        CINE<span>UZ</span>
+      </a>
+
+      <form class="nav-search" method="get" action="{% url 'home' %}">
+        {% if genre %}<input type="hidden" name="genre" value="{{ genre }}">{% endif %}
+        <input
+          type="text"
+          name="q"
+          value="{{ q }}"
+          placeholder="Kino, janr, yil..."
+          aria-label="Kino qidirish"
+        >
+        <button type="submit" class="nav-search-btn" aria-label="Qidirish">
+          <i class="bi bi-search" style="font-size:0.9rem;"></i>
+        </button>
+      </form>
+
+      <div class="auth-buttons">
+        {% if user.is_authenticated %}
+          <span class="user-greeting">Salom, {{ user.username }}</span>
+          <a href="{% url 'logout' %}" class="btn-auth btn-logout">
+            <i class="bi bi-box-arrow-right"></i>
+            Chiqish
+          </a>
+        {% else %}
+          <a href="{% url 'login' %}" class="btn-auth btn-login">
+            <i class="bi bi-box-arrow-in-right"></i>
+            Kirish
+          </a>
+          <a href="{% url 'signup' %}" class="btn-auth btn-signup">
+            <i class="bi bi-person-plus"></i>
+            Ro'yxatdan o'tish
+          </a>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero Section ────────────────────────────────────── -->
+{% if not q and not genre %}
+<section class="hero" aria-label="Asosiy banner">
+  <div class="hero-bg"></div>
+  <div class="hero-accent"></div>
+
+  <div class="container hero-content pt-5">
+    <div class="row align-items-end g-4">
+
+      <!-- Left: Text content -->
+      <div class="col-lg-7 col-md-8">
+        <br>
+        <br>
+        <div class="hero-eyebrow">
+          <span class="dot"></span>
+          Yangi kinolar mavjud
+        </div>
+
+        <h1 class="hero-title">
+          UZBEK<br>
+          <span class="line-accent">KINO</span><br>
+          DUNYOSI
+        </h1>
+
+        <p class="hero-desc">
+          Eng sara kinolarni sifatli formatda tomosha qiling.
+          Yangi premyeralar, klassiklar va ko'plab janrlar — barchasi bir joyda.
+        </p>
+
+        <div class="hero-stats">
+          <div class="stat-item">
+            <span class="stat-num">{{ movies|length }}+</span>
+            <span class="stat-label">Kinolar</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-num">{{ genres|length }}</span>
+            <span class="stat-label">Janrlar</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-num">HD</span>
+            <span class="stat-label">Sifat</span>
+          </div>
+        </div>
+
+        <div class="hero-cta">
+          {% if banner_movie %}
+          <a href="{% url 'movie_detail' banner_movie.id %}" class="btn-primary-cine">
+            <i class="bi bi-play-fill"></i>
+            Tomosha boshlash
+          </a>
+          {% else %}
+          <a href="#movies-section" class="btn-primary-cine">
+            <i class="bi bi-play-fill"></i>
+            Tomosha boshlash
+          </a>
+          {% endif %}
+          <a href="#movies-section" class="btn-ghost-cine">
+            <i class="bi bi-grid-3x3-gap"></i>
+            Barcha kinolar
+          </a>
+        </div>
+      </div>
+
+      <!-- Right: Banner movie poster card -->
+      {% if banner_movie %}
+      <div class="col-lg-5 col-md-4 banner-movie-col pb-4">
+        <div style="position:relative; display:inline-block;">
+          <div class="banner-label">
+            <i class="bi bi-fire" style="margin-right:4px;"></i>Eng yangi
+          </div>
+          <a href="{% url 'movie_detail' banner_movie.id %}" class="banner-card">
+            <div class="banner-card-poster">
+              {% if banner_movie.poster %}
+                <img src="{{ banner_movie.poster.url }}" alt="{{ banner_movie.title }}">
+              {% else %}
+                <div class="banner-card-placeholder">
+                  <i class="bi bi-camera-video"></i>
+                </div>
+              {% endif %}
+              <div class="banner-card-overlay"></div>
+              <div class="banner-play-badge"><i class="bi bi-play-fill"></i></div>
+            </div>
+            <div class="banner-card-info">
+              <div class="banner-card-title">{{ banner_movie.title }}</div>
+              <div class="banner-card-meta">
+                {% if banner_movie.year %}<span>{{ banner_movie.year }}</span>{% endif %}
+                {% if banner_movie.year and banner_movie.genre %}<span style="width:3px;height:3px;background:var(--text-muted);border-radius:50%;display:inline-block;"></span>{% endif %}
+                {% if banner_movie.genre %}<span style="color:var(--accent);">{{ banner_movie.genre }}</span>{% endif %}
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <div class="hero-scroll">
+    <i class="bi bi-chevron-down"></i>
+  </div>
+</section>
+{% endif %}
+
+
+<!-- ── Genre Filter Bar ────────────────────────────────── -->
+{% if genres %}
+<div class="genre-bar {% if q or genre %}pt-navbar{% endif %}">
+  <div class="container">
+    <div class="genre-scroller" role="navigation" aria-label="Janr filterlari">
+      <a
+        href="{% if q %}?q={{ q }}{% else %}?{% endif %}"
+        class="genre-pill {% if not genre %}active{% endif %}"
+      >Barchasi</a>
+
+      {% for g in genres %}
+        {% if g %}
+        <a
+          href="?genre={{ g }}{% if q %}&q={{ q }}{% endif %}"
+          class="genre-pill {% if genre == g %}active{% endif %}"
+        >{{ g }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ── Main Content ────────────────────────────────────── -->
+<main class="container pt-4 pb-5" id="movies-section">
+
+  <!-- Search result info -->
+  {% if q or genre %}
+  <div class="search-result-bar">
+    <span class="search-query-text">
+      {% if q %}
+        <strong>"{{ q }}"</strong> bo'yicha natijalar
+        {% if genre %} · <strong>{{ genre }}</strong>{% endif %}
+      {% else %}
+        <strong>{{ genre }}</strong> janridagi kinolar
+      {% endif %}
+      <span class="ms-2 text-muted" style="font-size:0.8rem;">— {{ movies|length }} ta topildi</span>
+    </span>
+    <a href="{% url 'home' %}" class="search-clear">
+      <i class="bi bi-x-circle"></i>
+      Tozalash
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- Section header (only on browsing, no search) -->
+  {% if not q %}
+  <div class="section-header">
+    <h2 class="section-title">
+      {% if genre %}{{ genre }}{% else %}Barcha Kinolar{% endif %}<span class="accent-dot">.</span>
+    </h2>
+    <span class="section-count">{{ movies|length }} ta kino</span>
+  </div>
+  {% endif %}
+
+  <!-- Movie Grid -->
+  <div class="movie-grid" role="list">
+    {% for movie in movies %}
+    <a
+      class="movie-card"
+      href="{% url 'movie_detail' movie.pk %}"
+      role="listitem"
+      aria-label="{{ movie.title }}"
+      tabindex="0"
+    >
+      <!-- Poster -->
+      <div class="card-poster">
+        {% if movie.poster %}
+          <img
+            src="{{ movie.poster.url }}"
+            alt="{{ movie.title }} poster"
+            loading="lazy"
+          >
+        {% else %}
+          <div class="card-poster-placeholder">
+            <i class="bi bi-camera-video"></i>
+            <span>Poster yo'q</span>
+          </div>
+        {% endif %}
+
+        <div class="card-overlay"></div>
+
+        <div class="card-play-btn" aria-hidden="true">
+          <i class="bi bi-play-fill"></i>
+        </div>
+
+        <!-- Rating -->
+        {% if movie.rating %}
+        <div class="card-rating" aria-label="Reyting {{ movie.rating }}">
+          <i class="bi bi-star-fill" style="font-size:0.65rem;"></i>
+          {{ movie.rating }}
+        </div>
+        {% endif %}
+
+        <!-- New badge for recent movies -->
+        {% if movie.id and movie.id >= movies.0.id|add:"-5" %}
+        <div class="card-badge">Yangi</div>
+        {% endif %}
+      </div>
+
+      <!-- Info -->
+      <div class="card-body-cine">
+        <div class="card-title-cine" title="{{ movie.title }}">{{ movie.title }}</div>
+        <div class="card-meta-cine">
+          {% if movie.year %}
+            <span>{{ movie.year }}</span>
+            <span class="meta-sep"></span>
+          {% endif %}
+          {% if movie.genre %}
+            <span class="genre-tag">{{ movie.genre }}</span>
+          {% else %}
+            <span class="genre-tag">Kino</span>
+          {% endif %}
+          {% if movie.views %}
+            <span class="meta-sep"></span>
+            <span><i class="bi bi-eye" style="font-size:0.7rem;"></i> {{ movie.views }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+
+    {% empty %}
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <i class="bi bi-film"></i>
+      </div>
+      <div class="empty-state-title">Hech narsa topilmadi</div>
+      <p class="empty-state-desc">
+        Boshqa kalit so'z bilan qidirib ko'ring yoki
+        <a href="{% url 'home' %}" style="color:var(--accent);">barcha kinolarga</a> qayting.
+      </p>
+    </div>
+    {% endfor %}
+  </div>
+
+</main>
+
+
+<!-- ── Footer ──────────────────────────────────────────── -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-md-6 mb-3 mb-md-0">
+        <div class="footer-brand">CINE<span>UZ</span></div>
+        <div class="footer-tagline">Eng sara kinolar — bir platformada</div>
+      </div>
+      <div class="col-md-6 text-md-end">
+        <div class="d-flex justify-content-md-end gap-3">
+          <a href="{% url 'home' %}" class="genre-pill">Bosh sahifa</a>
+          {% for g in genres %}{% if g %}<a href="?genre={{ g }}" class="genre-pill">{{ g }}</a>{% endif %}{% endfor %}
+        </div>
+      </div>
+    </div>
+    <hr class="footer-divider">
+    <p class="footer-copy">&copy; 2025 CineUZ. Barcha huquqlar himoyalangan.</p>
+  </div>
+</footer>
+
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  // Navbar scroll effect
+  const nav = document.getElementById('mainNav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 20);
+  }, { passive: true });
+
+  // Smooth scroll for hero CTA
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
+
+</body>
+</html>

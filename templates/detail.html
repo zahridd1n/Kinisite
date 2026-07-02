@@ -301,6 +301,16 @@
       color: var(--text-primary);
     }
 
+    .btn-liked {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .btn-liked:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+
     /* ── Video Player Section ────────────────────────────── */
     .player-section {
       margin-top: 40px;
@@ -779,6 +789,10 @@
             <a href="#player-section" class="btn-play" id="watchBtn">
               <i class="bi bi-play-fill"></i>
               Tomosha qilish
+            </a>
+            <a href="{% url 'like' movie.pk %}" class="btn-outline-cine {% if is_liked %}btn-liked{% endif %}" id="likeBtn">
+              <i class="bi bi-heart{% if not is_liked %}-empty{% endif %}"></i>
+              {{ like_count }} Yoqtirish
             </a>
             <button class="btn-outline-cine" id="shareBtn" onclick="shareMovie()">
               <i class="bi bi-share"></i>

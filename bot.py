@@ -73,8 +73,8 @@ import random
 # =========================
 # TELEGRAM API MA'LUMOTLARI
 # =========================
-API_ID = 36295785
-API_HASH = "ac4588c8b05ebc511d186397fe521c57"
+API_ID = 2131
+API_HASH = ""
 SESSION_NAME = "my_account"
 
 UPDATE_INTERVAL = 10      # har 10 sekundda rasm yangilanadi

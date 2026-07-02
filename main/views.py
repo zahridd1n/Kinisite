@@ -4,13 +4,17 @@ import asyncio
 import threading
 import queue
 import json
+import datetime
 
 from django.conf import settings
 from django.http import StreamingHttpResponse, JsonResponse
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404,redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.cache import cache
+from django.contrib.auth import login, authenticate
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
 
 from telethon import TelegramClient
 from telethon.sessions import StringSession
@@ -188,11 +192,11 @@ def home(request):
 
     genre = request.GET.get("genre", "")
     if genre:
-        movies = movies.filter(genre__icontains=genre)
+        movies = movies.filter(genre__name__icontains=genre)
 
     genres = models.Category.objects.filter().order_by('?')[:6]
 
-    return render(request, "index.html", {
+    return render(request, "index2.html", {
         "movies": movies,
         "genres": genres,
         "q": q,
@@ -206,6 +210,15 @@ def movie_detail(request, pk):
     releted_movie = Movie.objects.filter(genre=movie.genre).exclude(pk=pk)
     comments = models.Comments.objects.filter(movie=movie)
     Movie.objects.filter(pk=pk).update(views=movie.views + 1)
+    
+    # Check if user has liked this movie
+    is_liked = False
+    if request.user.is_authenticated:
+        is_liked = models.Like.objects.filter(movie=movie, user=request.user).exists()
+    
+    # Count total likes
+    like_count = models.Like.objects.filter(movie=movie).count()
+    
     if request.method == 'POST':
         name = request.POST.get('name')
         text = request.POST.get('text')
@@ -215,12 +228,96 @@ def movie_detail(request, pk):
     context={
         "movie": movie,
         "comments":comments,
-        "releted_movie":releted_movie
+        "releted_movie":releted_movie,
+        "is_liked": is_liked,
+        "like_count": like_count
     }
     return render(request, "detail.html", context=context)
 
 
+# ─── Authentication Views ─────────────────────────────────────────────────────
+from django.contrib.auth import logout
 
 
+def custom_logout(request):
+    logout(request)
+    return redirect('login')
 
 
+def custom_login(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('home')
+        else:
+            return render(request, 'login.html', {'error': 'Invalid username or password'})
+    return render(request, 'login.html')
+
+
+def custom_signup(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        password_confirm = request.POST.get('password_confirm')
+
+        if password != password_confirm:
+            return render(request, 'signup.html', {'error': 'Passwords do not match'})
+
+        if User.objects.filter(username=username).exists():
+            return render(request, 'signup.html', {'error': 'Username already exists'})
+
+        if User.objects.filter(email=email).exists():
+            return render(request, 'signup.html', {'error': 'Email already exists'})
+
+        user = User.objects.create_user(username=username, email=email, password=password)
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        return redirect('home')
+
+    return render(request, 'signup.html')
+
+
+@login_required(login_url='login')
+def like(request, id):
+    liked = False
+    like = models.Like.objects.filter(movie_id=id, user=request.user)
+    if like.exists():
+        like.delete()
+    else:
+        models.Like.objects.create(movie_id=id, user=request.user)
+
+    return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
+current_year = datetime.datetime.now().year
+endyear = current_year-26
+def kino_list(request):
+    movie = models.Movie.objects.select_related("genre", "rejissor").prefetch_related("actors").all()
+    q = request.GET.get("q", "")
+    year = request.GET.get('year', "")
+    genre = request.GET.get('genre', "")
+    actors = request.GET.get("actors","")
+    rejisor = request.GET.get("rejisor", "")
+
+    if q:
+        movie = movie.filter(title__icontains=q)
+    if genre:
+        movie = movie.filter(genre_id=genre)
+    if year:
+        movie = movie.filter(year=year)
+    if actors:
+        movie = movie.filter(actors=actors)
+    if rejisor:
+        movie = movie.filter(rejissor_id=rejisor)
+
+    context ={
+        "year": range(current_year,endyear,-1),
+        "genre":models.Category.objects.all(),
+        "actors":models.Actor.objects.all(),
+        'rejisor':models.Rejissor.objects.all(),
+        "movie":movie,
+    }
+    return render(request, "list.html", context=context)
